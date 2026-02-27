@@ -20,17 +20,20 @@ const UserSchema = new Schema({
      },
      age:{
         type:Number,
-        required:true,
+        required:false,
      },
      address:{
         type:String, 
-        required:true,
+        required:false,
      },
      contact:{
         type:String,
-        required:true,
+        required:false,
      },
-
+     societyId:{
+        type:String,
+        required:false,
+     },
 });
 
 module.exports = mongoose.model(

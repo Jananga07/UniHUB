@@ -2,7 +2,7 @@ const User = require("../Models/User");
 
 //  Register New User
 const addUsers = async (req, res) => {
-  const { name, gmail, password, role, age, address, contact } = req.body;
+  const { name, gmail, password, role, age, address, contact, societyId } = req.body;
 
 
   try {
@@ -14,6 +14,7 @@ const addUsers = async (req, res) => {
       age,
       address,
       contact,
+      societyId,
     });
 
     await newUser.save();

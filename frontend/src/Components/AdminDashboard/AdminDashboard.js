@@ -13,10 +13,14 @@ function AdminDashboard() {
   const [formData, setFormData] = useState({});
   const [searchQuery, setSearchQuery] = useState({});
   const [editUserId, setEditUserId] = useState(null);
+  const [modules, setModules] = useState([]);
+  const [societies, setSocieties] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();
+    fetchModules();
+    fetchSocieties();
   }, []);
 
   const fetchUsers = async () => {
@@ -28,15 +32,41 @@ function AdminDashboard() {
     }
   };
 
+  const fetchModules = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/modules");
+      setModules(res.data.modules || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchSocieties = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/societies");
+      setSocieties(res.data.societies || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const submitData = async (endpoint, role) => {
     try {
+      const selectedSocietyId = formData.societyId;
       const data = role ? { ...formData, role } : formData;
       await axios.post(`http://localhost:5000/${endpoint}`, data);
       alert("Added Successfully!");
+
       setFormData({});
       fetchUsers();
+      if (endpoint === "modules") {
+        fetchModules();
+      }
+      if (endpoint === "societies") {
+        fetchSocieties();
+      }
     } catch (err) {
       alert("Error!");
     }
@@ -85,6 +115,11 @@ function AdminDashboard() {
         u.gmail.toLowerCase().includes(searchQuery[userCategory]?.toLowerCase() || "")
     );
 
+  // Societies that are not yet assigned to any society manager
+  const availableSocietiesForManager = societies.filter(
+    (s) => !users.some((u) => u.role === "societyManager" && u.societyId === s._id)
+  );
+
   return (
     <div className="admin-dashboard">
       {/* Sidebar */}
@@ -92,8 +127,7 @@ function AdminDashboard() {
         <h2>Uni Hub</h2>
         <a onClick={() => setActiveTab("dashboard")}>Dashboard</a>
         <a onClick={() => setActiveTab("users")}>All Users</a>
-        <a onClick={() => setActiveTab("teacher")}>Add Teacher</a>
-        <a onClick={() => setActiveTab("societyAdmin")}>Add Society Admin</a>
+        <a onClick={() => setActiveTab("societyManager")}>Add Society Manager</a>
         <a onClick={() => setActiveTab("module")}>Add Module</a>
         <a onClick={() => setActiveTab("society")}>Add Society</a>
         <button onClick={() => navigate("/adquiz")}>Add Quiz</button>
@@ -118,12 +152,8 @@ function AdminDashboard() {
       <CountUp end={users.filter(u => u.role === "Student").length} duration={2} />
     </div>
     <div className="dashboard-card">
-      <h3>Teachers</h3>
-      <CountUp end={users.filter(u => u.role === "teacher").length} duration={2} />
-    </div>
-    <div className="dashboard-card">
-      <h3>Society Admins</h3>
-      <CountUp end={users.filter(u => u.role === "societyAdmin").length} duration={2} />
+      <h3>Society Managers</h3>
+      <CountUp end={users.filter(u => u.role === "societyManager").length} duration={2} />
     </div>
   </div>
 )}
@@ -132,13 +162,15 @@ function AdminDashboard() {
         {activeTab === "users" && (
           <div className="users-section">
             <div className="category-tabs">
-              {["student","teacher","societyadmin"].map(cat => (
+              {["student","societymanager"].map(cat => (
                 <button
                   key={cat}
                   className={userCategory === cat ? "active" : ""}
                   onClick={() => setUserCategory(cat)}
                 >
-                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  {cat === "societymanager"
+                    ? "Society Manager"
+                    : cat.charAt(0).toUpperCase() + cat.slice(1)}
                 </button>
               ))}
             </div>
@@ -161,6 +193,7 @@ function AdminDashboard() {
                     <th>Age</th>
                     <th>Address</th>
                     <th>Role</th>
+                    <th>Password</th>
                     <th>Contact</th>
                     <th>Actions</th>
                   </tr>
@@ -173,6 +206,7 @@ function AdminDashboard() {
                       <td>{editUserId === u._id ? <input name="age" value={formData.age} onChange={handleChange} /> : u.age}</td>
                       <td>{editUserId === u._id ? <input name="address" value={formData.address} onChange={handleChange} /> : u.address?.trim()}</td>
                       <td>{editUserId === u._id ? <input name="role" value={formData.role} onChange={handleChange} /> : u.role?.trim()}</td>
+                      <td>{editUserId === u._id ? <input name="password" value={formData.password} onChange={handleChange} /> : u.password?.trim()}</td>
                       <td>{editUserId === u._id ? <input name="contact" value={formData.contact} onChange={handleChange} /> : u.contact?.trim()}</td>
                       <td>
                         {editUserId === u._id ? (
@@ -193,44 +227,143 @@ function AdminDashboard() {
         )}
 
         {/* Add Forms */}
-        {["teacher","societyAdmin","module","society"].map(tab => (
-          activeTab === tab && (
-            <div className="form-card" key={tab}>
-              <h2>{tab === "teacher" ? "Add Teacher" :
-                  tab === "societyAdmin" ? "Add Society Admin" :
-                  tab === "module" ? "Add Module" : "Add Society"}</h2>
-              {tab.includes("teacher") || tab.includes("societyAdmin") ? (
-                <>
-                  <input name="name" placeholder="Name" onChange={handleChange} />
-                  <input name="gmail" placeholder="Email" onChange={handleChange} />
-                  <input name="age" placeholder="Age" onChange={handleChange} />
-                  <input name="address" placeholder="Address" onChange={handleChange} />
-                  <input name="role" placeholder="Role" onChange={handleChange} />
-                  <input name="contact" placeholder="Contact" onChange={handleChange} />
-                </>
-              ) : tab === "module" ? (
-                <>
-                  <input name="moduleName" placeholder="Module Name" onChange={handleChange} />
-                  <input name="moduleCode" placeholder="Module Code" onChange={handleChange} />
-                </>
-              ) : (
-                <>
-                  <input name="societyName" placeholder="Society Name" value={formData.societyName || ""} onChange={handleChange} />
-                  <input name="description" placeholder="Description" value={formData.description || ""} onChange={handleChange} />
-                </>
+        {/* Show Society Manager + Society forms together on one interface */}
+        {(activeTab === "societyManager" || activeTab === "society") && (
+          <>
+            <div className="form-card">
+              <h2>Add Society Manager</h2>
+              <input name="name" placeholder="Name" onChange={handleChange} />
+              <input name="gmail" placeholder="Email" onChange={handleChange} />
+              <input name="password" placeholder="Password" type="password" onChange={handleChange} />
+              <input name="age" placeholder="Age" onChange={handleChange} />
+              <input name="address" placeholder="Address" onChange={handleChange} />
+              <input name="contact" placeholder="Contact" onChange={handleChange} />
+
+              {/* Select an existing society for this manager (only unassigned societies) */}
+              {availableSocietiesForManager.length > 0 && (
+                <select
+                  name="societyId"
+                  value={formData.societyId || ""}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Society</option>
+                  {availableSocietiesForManager.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.societyName}
+                    </option>
+                  ))}
+                </select>
               )}
-              <button className="dashboard-btn" onClick={() => submitData(
-                tab === "teacher" || tab === "societyAdmin" ? "register" :
-                tab === "module" ? "modules" :
-                tab === "society" ? "societies" : null,
-                tab === "teacher" ? "teacher" :
-                tab === "societyAdmin" ? "societyAdmin" : null
-              )}>
-                Add
+              <button
+                className="dashboard-btn"
+                onClick={() =>
+                  submitData("Users", "societyManager")
+                }
+              >
+                Add Society Manager
               </button>
             </div>
-          )
-        ))}
+
+            {/* Right side: table of registered society managers and their societies */}
+            <div className="form-card">
+              <h2>Registered Society Managers</h2>
+              {users.filter((u) => u.role === "societyManager").length === 0 ? (
+                <p>No society managers registered yet.</p>
+              ) : (
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Society</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users
+                        .filter((u) => u.role === "societyManager")
+                        .map((m) => {
+                          const society = societies.find(
+                            (s) => s._id === m.societyId
+                          );
+                          return (
+                            <tr key={m._id}>
+                              <td>{m.name}</td>
+                              <td>{m.gmail}</td>
+                              <td>
+                                {society
+                                  ? society.societyName
+                                  : "No society assigned"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="form-card">
+              <h2>Add Society</h2>
+              <input
+                name="societyName"
+                placeholder="Society Name"
+                value={formData.societyName || ""}
+                onChange={handleChange}
+              />
+              <input
+                name="description"
+                placeholder="Description"
+                value={formData.description || ""}
+                onChange={handleChange}
+              />
+              <button
+                className="dashboard-btn"
+                onClick={() => submitData("societies")}
+              >
+                Add Society
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Module form stays as its own section */}
+        {activeTab === "module" && (
+          <div className="form-card">
+            <h2>Add Module</h2>
+            <input
+              name="moduleName"
+              placeholder="Module Name"
+              onChange={handleChange}
+            />
+            <input
+              name="moduleCode"
+              placeholder="Module Code"
+              onChange={handleChange}
+            />
+
+            {modules.length > 0 && (
+              <div className="module-list">
+                <h3>All Modules</h3>
+                <ul>
+                  {modules.map((m) => (
+                    <li key={m._id}>
+                      {m.moduleName} ({m.moduleCode})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <button
+              className="dashboard-btn"
+              onClick={() => submitData("modules")}
+            >
+              Add Module
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
