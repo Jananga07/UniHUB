@@ -40,7 +40,11 @@ function StudentQuiz() {
 
     quizzes.forEach((quiz) => {
       quiz.questions.forEach((q) => {
-        const correctIndex = q.options.indexOf(q.correctAnswer);
+        const correctIndex =
+          typeof q.correctIndex === "number"
+            ? q.correctIndex
+            : q.options.indexOf(q.correctAnswer);
+
         if (answers[q._id] === correctIndex) {
           scoreCount++;
         }
@@ -57,15 +61,21 @@ function StudentQuiz() {
 
       {quizzes.map((quiz) => (
         <div key={quiz._id}>
-          <h3>{quiz.title}</h3>
+          <h3>{quiz.quizName ?? quiz.title}</h3>
 
           {quiz.questions.map((q, idx) => {
-            const correctIndex = q.options.indexOf(q.correctAnswer);
+            const correctIndex =
+              typeof q.correctIndex === "number"
+                ? q.correctIndex
+                : q.options.indexOf(q.correctAnswer);
+            const questionText = q.questionText ?? q.question;
+            const correctAnswerText =
+              q.correctAnswer ?? q.options?.[correctIndex];
 
             return (
               <div key={q._id} className="quiz-question">
                 <p>
-                  {idx + 1}. {q.question}
+                  {idx + 1}. {questionText}
                 </p>
 
                 {q.options.map((opt, optIdx) => {
@@ -100,7 +110,7 @@ function StudentQuiz() {
 
                 {submitted && answers[q._id] !== correctIndex && (
                   <p className="correct-answer-text">
-                    Correct Answer: {q.correctAnswer}
+                    Correct Answer: {correctAnswerText}
                   </p>
                 )}
               </div>
